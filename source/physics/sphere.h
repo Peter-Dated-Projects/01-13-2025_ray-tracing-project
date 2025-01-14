@@ -31,7 +31,7 @@ public:
 
         // find nearest root that lies in acceptable range
         auto root = (h - sqrtd) / a;
-        if (ray_t.surrounds(root)) {
+        if (!ray_t.surrounds(root)) {
             root = (h + sqrtd) / a;
 
             // if not within acceptable range, quit
