@@ -1,0 +1,7 @@
+{
+    "editor.defaultFormatter": "psycha0s.cpp-format",
+    "files.associations": {
+        "string": "cpp",
+        "iostream": "cpp"
+    }
+}
