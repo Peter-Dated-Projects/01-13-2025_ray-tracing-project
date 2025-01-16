@@ -15,7 +15,10 @@ make run
 
 The project is still in progress, but here's a sneak peek of what I've done so far (lower = earlier in project):
 
+- [x] 01/15/2025 - Diffusion and Gamma Correction
+![image](doc/01-15-2025.png)
 
+- [x] 01/13/2025 - Basic Rendering Engine with Raytracing
 ![image](doc/01-13-2025.png)
 
 
