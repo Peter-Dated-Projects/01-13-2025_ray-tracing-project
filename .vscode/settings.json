@@ -1,7 +1,12 @@
 {
-    "editor.defaultFormatter": "psycha0s.cpp-format",
+    "editor.defaultFormatter": "ms-python.black-formatter",
     "files.associations": {
         "string": "cpp",
         "iostream": "cpp"
-    }
+    },
+    "[cpp]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true
 }
