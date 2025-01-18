@@ -8,12 +8,20 @@ I thought it would be a fun project that I could try to grind out.
 
 ## How To Run
 
-make run
+make
+./result > img.ppm
+view image.ppm
 
 
 ## The Timeline Showcase
 
 The project is still in progress, but here's a sneak peek of what I've done so far (lower = earlier in project):
+
+- [x] 01/20/2025 - Camera Lookat and Lookfrom Locations
+![image](doc/01-17-2025_2.png)
+
+- [x] 01/20/2025 - Materials, Metal, Reflection, and Refraction
+![image](doc/01-17-2025_1.png)
 
 - [x] 01/15/2025 - Diffusion and Gamma Correction
 ![image](doc/01-15-2025.png)
