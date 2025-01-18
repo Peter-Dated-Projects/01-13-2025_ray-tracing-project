@@ -138,4 +138,14 @@ inline vec3 refract(const vec3& uv, const vec3& n, double etai_over_etat) {
     return r_out_perp + r_out_parallel;
 }
 
+inline vec3 random_in_unit_disk() {
+    // this algo simply tries to generate points until valid point inside of circle of length 1
+    while (true) {
+        auto p = vec3(random_double(-1, 1), random_double(-1, 1), 0);
+        if (p.length_squared() < 1) {
+            return p;
+        }
+    }
+}
+
 #endif

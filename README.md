@@ -17,10 +17,14 @@ view image.ppm
 
 The project is still in progress, but here's a sneak peek of what I've done so far (lower = earlier in project):
 
-- [x] 01/20/2025 - Camera Lookat and Lookfrom Locations
+
+- [x] 01/17/2025 - Depth of Field // Camera Focus Depth
+![image](doc/01-17-2025_3.png)
+
+- [x] 01/17/2025 - Camera Lookat and Lookfrom Locations
 ![image](doc/01-17-2025_2.png)
 
-- [x] 01/20/2025 - Materials, Metal, Reflection, and Refraction
+- [x] 01/17/2025 - Materials, Metal, Reflection, and Refraction
 ![image](doc/01-17-2025_1.png)
 
 - [x] 01/15/2025 - Diffusion and Gamma Correction
@@ -32,3 +36,8 @@ The project is still in progress, but here's a sneak peek of what I've done so f
 
 
 
+
+
+## Credits
+
+[_Ray Tracing in One Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html)

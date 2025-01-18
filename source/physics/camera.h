@@ -6,6 +6,7 @@
 #include "hittable.h"
 #include "material.h"
 
+
 class camera {
 private:
     // Private Camera Variables here
@@ -17,6 +18,8 @@ private:
     vec3 pixel_delta_v;             // Offset to pixel below
     double pixel_samples_scale;     // Color scale factor for a sum of pixel samples -- anti-aliasing
     vec3 u, v, w;                   // Camera frame basis vectors
+    vec3 defocus_disk_u;            // Defocus disk horizontal radius
+    vec3 defocus_disk_v;            // Defocus disk vertical radius
 
     void initialize() {
         height = int(width / aspect_ratio);
@@ -27,10 +30,9 @@ private:
         center = lookfrom;
 
         // Determine viewport dimensions
-        double focal_length = (lookfrom - lookat).length();
         double theta = degrees_to_radians(vfov);
         double h = std::tan(theta/2);
-        double viewport_height = 2 * h * focal_length;
+        double viewport_height = 2 * h * focus_dist;
         double viewport_width = viewport_height * (double(width) / double(height));
 
         // calculate the uv,w unit basis vectors for the camera coordinate frame
@@ -47,10 +49,13 @@ private:
         pixel_delta_v = viewport_v / height;
 
         // calculate location of upper left pixel (0th pixel)
-        auto viewport_upper_left = center - (focal_length * w) - viewport_u/2 - viewport_v/2;
+        auto viewport_upper_left = center - (focus_dist * w) - viewport_u/2 - viewport_v/2;
         pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
 
-
+        // Calcualt ethe camera defocus disk basis vectors
+        auto defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
+        defocus_disk_u = u * defocus_radius;
+        defocus_disk_v = v * defocus_radius;
 
     }
 
@@ -61,7 +66,8 @@ private:
         auto offset = sample_square();
         auto pixel_sample = pixel00_loc + ((i + offset.x()) * pixel_delta_u) + ((j + offset.y()) * pixel_delta_v);
 
-        auto ray_origin = center;
+        // camera with adjustable depth of field // focus range
+        auto ray_origin = (defocus_angle <= 0) ? center : defocus_disk_sample();
         auto ray_direction = pixel_sample - ray_origin;
 
         return ray(ray_origin, ray_direction);
@@ -70,6 +76,12 @@ private:
     vec3 sample_square() const {
         // Returns the vector to a random point in teh [+-.5, +-.5] unit square range
         return vec3(random_double() - 0.5, random_double() + 0.5, 0);
+    }
+
+    point3 defocus_disk_sample() const {
+        // returns a random point inside of camera defocus disk
+        auto p = random_in_unit_disk();
+        return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
     }
 
     color ray_color(const ray& r, int depth, const hittable& world) const {
@@ -106,9 +118,14 @@ public:
     point3 lookat       = point3(0, 0, -1);     // point camera is looking at
     vec3 vup            = vec3(0, 1, 0);        // camera relative "up" vec3
 
-    void render(const hittable& world) {   
-        initialize();
+    double defocus_angle = 0;           // variation angle of rays through each pixel
+    double focus_dist = 10;             // distance from camera lookfrom point to plane of perfect focus
+                                        // everything before plane == perfect focus
+                                        // everything past plane   == defocused!!
 
+    void render(const hittable& world, int min_width, int max_width) {   
+        initialize();
+        
         std::cout << "P3" << std::endl << width << ' ' << height << std::endl << 255 << std::endl;
 
         double r, g, b;
@@ -117,7 +134,7 @@ public:
             // log the progress
             std::clog << "\rScanlines remaining: " << (height - j) << " " << std::flush;
 
-            for (int i = 0; i < width; i++) {
+            for (int i = min_width; i < max_width; i++) {
                 color pixel_color(0, 0, 0);
 
                 // anti-aliasing
@@ -129,9 +146,11 @@ public:
             }
         }
         std::clog << "\rDone.               \n";
-
-
     }
+
+
+    // getters + setters
+    int get_height() { return height; }
 
 };
 
