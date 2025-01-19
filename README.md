@@ -18,6 +18,19 @@ view image.ppm
 The project is still in progress, but here's a sneak peek of what I've done so far (lower = earlier in project):
 
 
+- [x] 01/19/2025 - Multi-Core Rendering (for Mac M2)
+
+I managed to drastically reduce rendering times by using multi-core processing. Mac had a pretty nice and simple implementation of the Multi-Core Processing system -- but I just used the standard `fork()` system call to create child processes, and went off from there.
+
+The end result?
+
+I'd guess probably a 7x reduction in computation time. It's probably not the greatest impleentation, but I felt like GOD when I managed to figure it out.
+
+Here are some benchmarks:
+
+
+![image](doc/01-19-2025.png)
+
 - [x] 01/17/2025 - Depth of Field // Camera Focus Depth
 ![image](doc/01-17-2025_3.png)
 

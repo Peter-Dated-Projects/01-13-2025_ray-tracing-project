@@ -6,11 +6,23 @@
 #include "hittable.h"
 #include "material.h"
 
+#include <atomic>
+#include <thread>
+#include <vector>
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include <mutex>
+#include <fstream>
+#include <sstream>
+#include <chrono>
+
 
 class camera {
 private:
     // Private Camera Variables here
-
     int height;                     // Rendered image height
     point3 center;                  // Camera center
     point3 pixel00_loc;             // Location of pixel 0, 
@@ -125,8 +137,12 @@ public:
 
     void render(const hittable& world, int min_width, int max_width) {   
         initialize();
+
+        time_t start_time = time(NULL);
+
+        std::ofstream output("assets/output-no-multi-proc.ppm");
         
-        std::cout << "P3" << std::endl << width << ' ' << height << std::endl << 255 << std::endl;
+        output << "P3" << std::endl << width << ' ' << height << std::endl << 255 << std::endl;
 
         double r, g, b;
         int ir, ig, ib;
@@ -142,12 +158,285 @@ public:
                     ray r = get_ray(i, j);
                     pixel_color += ray_color(r, max_depth, world);
                 }
-                write_color(std::cout, pixel_samples_scale * pixel_color);
+                write_color(output, pixel_samples_scale * pixel_color);
             }
         }
         std::clog << "\rDone.               \n";
+
+        time_t end_time = time(NULL);
+        std::cout << "Time taken: " << (end_time - start_time) << " seconds" << std::endl;
     }
 
+    bool multi_process_render(const hittable* world, int min_width, int max_width) {
+        initialize();
+
+        std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+
+        // Goal: create 4 processes -- 3 threads each
+        // Stage 1.1: groundwork
+        const int process_count = 7;
+        int valid_threads = 0;
+
+        pipe_file_directory pipefd[process_count];
+        pid_t children[process_count];
+        std::ofstream files[process_count];
+        std::mutex cout_mutex;
+
+        for (int i = 0; i < process_count; i++) {
+            files[i].open("assets/output" + std::to_string(i) + ".chk", std::ios::out | std::ios::trunc);
+            if (!files[i].is_open()) {
+                std::cerr << "Error: file failed to open" << std::endl;
+                return false;
+            }
+        }
+
+        // Stage 1.2: create pipes and batch children
+        std::cout << "Creating Child Processes" << std::endl;
+        for (int i = 0; i < process_count; i++) {
+            // create pipes
+            int tpipefd[2];
+            if (pipe(tpipefd) == -1) {
+                std::cerr << "Error: pipe failed" << std::endl;
+                return false;
+            }
+            pipefd[i] = {tpipefd[0], tpipefd[1]};
+
+            // fork child processes
+            
+            min_width = (width / process_count) * i;
+            max_width = (i == process_count - 1) ? width : (width / process_count) * (i + 1);
+
+            pid_t pid = fork();
+            if (pid < 0) {
+                // close child pipes
+                close(pipefd[i].read);
+                close(pipefd[i].write);
+                // flag child as failed
+                children[i] = -1;
+                continue;
+            } else if (pid == 0) {          // active child script
+                // close reading pipe -- child does not read
+                close(pipefd[i].read);
+
+                // Stage 2.1: open file io -- write to file
+                // Child: i | OPEN
+                const char* message = "OPEN";
+                write(pipefd[i].write, message, strlen(message) + 1);
+
+                // Stage 2.2: render section
+                std::cout << "Rendering in child process: " << i << std::endl;
+                
+                // begin rendering
+                area2d area = {min_width, max_width, 0, height};
+                render_portion(world, &area, &pipefd[i], &files[i]);
+
+                // close file
+                files[i].close();
+
+                // Stage 2.3: write to pipe when finished
+                // Child: i | FINISHED
+                message = "FINISHED";
+                write(pipefd[i].write, message, strlen(message) + 1);
+
+                std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
+
+                message = ("TIME " + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count())).c_str();
+                write(pipefd[i].write, message, strlen(message) + 1);
+
+                // Stage 2.4: clean
+                // close write pipe
+                close(pipefd[i].write);
+                exit(0);
+
+            } else {                        // active parent script
+                children[i] = pid;
+                valid_threads ++;
+
+                std::cout << "Created Child: " << i << std::endl;
+            }
+        }
+
+        // Stage 3: run parent script info
+        //      - reads from the pipes of child processes
+        //      - stores data into a buffer
+        //      - writes to the .ppm file (at the very end)
+        
+        std::cout << "Stage 3 -- Starting to read from child processes" << std::endl;
+
+        // Stage 3.1: check if valid resources
+        if (valid_threads <= 0) {
+            std::cerr << "Error: invalid thread count" << std::endl;
+            return false;
+        }
+
+        // Stage 3.2: read from pipes
+        std::atomic<int> lines_rendered(0);
+        // TODO - implement threading to read from all pipes
+        std::vector<std::thread> readers;
+        readers.reserve(process_count);
+
+        
+
+        for (int i = 0; i < process_count; i++) {
+            if (children[i] > 0) {      // if is valid child process
+                
+                // launch a thread to read
+                readers.emplace_back([this, i, &pipefd, &lines_rendered, &cout_mutex]() {
+                    char buffer[256];
+
+                    // continuously read until EOF or error
+                    while (true) {
+                        ssize_t bytes_read = read(pipefd[i].read, buffer, sizeof(buffer) - 1);
+                        if (bytes_read <= 0) {
+                            // bytes_read == 0 -- means it is EOF
+                            // bytes_read < 0 -- means there was an error
+                            break;
+                        }
+
+                        // nbull terminated and print or process the data
+                        buffer[bytes_read] = '\0';
+
+                        // check if a certain prefix is present
+                        if (strncmp(buffer, "OPEN", 4) == 0 || strncmp(buffer, "FINISHED", 8) == 0) {
+                            std::lock_guard<std::mutex> lock(cout_mutex);
+                            std::cout << "Child " << i << " says | OPEN" << std::endl;
+                        } else if (strncmp(buffer, "UPDATE", 6) == 0) {
+                            lines_rendered.fetch_add(1);
+                            {
+                                std::lock_guard<std::mutex> lock(cout_mutex);
+                                std::clog << "\rScanlines remaining: " << (height*process_count - lines_rendered.load()) << " " << std::flush;
+                            }
+                        } else if(strncmp(buffer, "TIME", 4) == 0) {
+                            std::lock_guard<std::mutex> lock(cout_mutex);
+                            std::cout << "Child " << i << " says | " << buffer << std::endl;
+                        }else {
+                            std::lock_guard<std::mutex> lock(cout_mutex);
+                            std::cout << "Child " << i << " says | " << buffer << std::endl;
+                        }
+                    }
+                    
+                });
+            }
+        }
+
+        // Stage 3.3: clean
+        // close processes + pipes
+        std::cout << "Closing Child Processes" << std::endl;
+        for (int i = 0; i < process_count; i++) {
+            if (children[i] > 0) {
+                waitpid(children[i], NULL, 0);
+                close(pipefd[i].read);
+                close(pipefd[i].write);
+
+                std::cout << "Closed Child: " << i << std::endl;
+            }
+        }
+
+        // join the threads
+        for (auto& reader : readers) {
+            reader.join();
+        }
+
+        // Stage 3.4: Write to file
+        std::ifstream files_read[process_count];
+        int* buffer = new int[height * width * 3];
+
+        std::ofstream log_file("assets/output.log", std::ios::out | std::ios::trunc);
+        if (!log_file.is_open()) {
+            std::cerr << "Error: log file failed to open" << std::endl;
+            return false;
+        }
+
+        // read each file and load data into the buffer ( RAW FILE )
+        const char* base_dir = "assets/output";
+        for (int i = 0; i < process_count; i++) {
+            files_read[i].open(base_dir + std::to_string(i) + ".chk");
+            
+            // check if file opened
+            if (!files_read[i].is_open()) {
+                std::cerr << "Error: file failed to open" << std::endl;
+                return false;
+            }
+        }
+
+        // open the output file
+        std::ofstream output("assets/output-w-multi-proc.ppm");
+        if (!output.is_open()) {
+            std::cerr << "Error: output file failed to open" << std::endl;
+            return false;
+        }
+
+        // dump image buffer into the output file
+        output << "P3" << std::endl << width << ' ' << height << std::endl << 255 << std::endl;
+
+        std::pair<int, int> sizes[process_count];
+        std::string tmp;
+        for (int i = 0; i < process_count; i++) {
+            getline(files_read[i], tmp);
+            // width + height
+            getline(files_read[i], tmp);
+            std::stringstream ss(tmp);
+            ss >> sizes[i].first >> sizes[i].second;
+            // format
+            getline(files_read[i], tmp);
+            // TODO - do something with that data
+        }
+
+        // all chk files read as --> (pixel, pixel, pixel on every line [from left to right, top to bottom])
+        for (int y = 0; y < height; y++) {
+            for (int i = 0; i < process_count; i++) {
+                int r, g, b;
+
+                for (int x = 0; x < sizes[i].first; x++) {
+                    files_read[i] >> r >> g >> b;
+                    output << r << ' ' << g << ' ' << b << std::endl;
+                }
+            }
+        }
+
+
+        // close all files
+        for (int i = 0; i < process_count; i++) {
+            files_read[i].close();
+        }
+        output.close();
+
+        std::clog << "\rDone.               \n";
+
+        return true;
+
+    }
+
+    void render_portion(const hittable* world, area2d *portion, pipe_file_directory *pipefd, std::ofstream *file) {
+        // camera already initialized
+        // header data already outputted
+        
+        double r, g, b;
+        int ir, ig, ib;
+
+        *file << "P3" << std::endl << (portion->max_x - portion->min_x) << ' ' << (portion->max_y - portion->min_y) << std::endl << 255 << std::endl;
+
+        for(int y = portion->min_y; y < portion->max_y; y++) {
+            // TODO -- log process 
+            const char* message = "UPDATE";
+            write(pipefd->write, message, strlen(message) + 1);
+
+            for (int x = portion->min_x; x < portion->max_x; x++) {
+
+                color pixel_color(0, 0, 0);
+                // aa
+                for(int sample = 0; sample < samples_per_pixel; sample++) {
+                    ray r = get_ray(x, y);
+                    pixel_color += ray_color(r, max_depth, *world);
+                }
+
+                // write to ostream file
+                // *file << x << ' ' << y << ' ';
+                write_color(*file, pixel_samples_scale * pixel_color);
+
+            }
+        }
+    }
 
     // getters + setters
     int get_height() { return height; }
