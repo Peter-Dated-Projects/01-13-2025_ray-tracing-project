@@ -26,8 +26,6 @@ The end result?
 
 I'd guess probably a 7x reduction in computation time. It's probably not the greatest impleentation, but I felt like GOD when I managed to figure it out.
 
-Here are some benchmarks:
-
 
 ![image](doc/01-19-2025.png)
 
