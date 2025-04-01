@@ -1,9 +1,9 @@
 #ifndef common_h
 #define common_h
 
-#include <cstdlib>
 #include <cmath>
 #include <iostream>
+#include <cstdlib>
 #include <limits>
 #include <memory>
 
