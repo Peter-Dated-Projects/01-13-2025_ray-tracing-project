@@ -17,10 +17,12 @@ class bvh_container {
 private:
     shared_ptr<bvh_node> _root;
     
-    int _max_depth;
     aabb _world_bounding_box;
+    int _max_depth;
 
 public:
+    // map of registered items
+
     bvh_container(): _root(nullptr), _max_depth(0) {};
     bvh_container(const shared_ptr<std::vector<shared_ptr<hittable>>> objects, int max_depth, point3 camera_pos)
         : _root(nullptr), _max_depth(max_depth) {

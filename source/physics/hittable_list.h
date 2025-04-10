@@ -13,7 +13,7 @@ using std::shared_ptr;
 class hittable_list : public hittable {
 public:
     shared_ptr<std::vector<shared_ptr<hittable>>> objects;
-    shared_ptr<bvh_container> bvh;
+    bvh_container bvh;
     bool _finalized;
 
     hittable_list(): _finalized(false) {
@@ -35,7 +35,7 @@ public:
     void finalize(point3 cam_position, int bvh_depth) {
         calculate_bounding_box();
         // create bvh tree
-        bvh = make_shared<bvh_container>(bvh_container(objects, bvh_depth, cam_position));
+        bvh = bvh_container(objects, bvh_depth, cam_position);
         _finalized = true;
 
         // output bounding box
@@ -49,34 +49,52 @@ public:
             return false;
         }
 
+        
         // goal here: use the bvh to do 2 things
         // 1. determine leaf nodes that interesect with ray
         // 2. check if any of the objects in the leaf nodes intersect with the ray
-
+        
         // keep track of all collisions with these variables
         hit_record temp_rec, temp_node_rec;
         temp_node_rec.t = 1e9;          // use t as a distance variable
         bool hit_anything = false;
         auto closest_so_far = ray_t.max;
+        
+        if (bvh.max_depth() == 0) {
+            // no bvh tree, just check all objects
+            // iterate through all relevant objects in the node 
+            for(auto object : *objects){
+                if (object->hit(r, interval(ray_t.min, closest_so_far), temp_rec)) {
+                    // update data for closest valid collision so far
+                    hit_anything = true;
+                    closest_so_far = temp_rec.t;
+                    rec = temp_rec;
+                }
 
-        std::vector<shared_ptr<bvh_node>> leaf_nodes = bvh->get_intersecting_nodes(r, ray_t, temp_node_rec);
+            }
+            return hit_anything;
+        }
+
+
+        // find intersecting leaf nodes
+        std::vector<shared_ptr<bvh_node>> leaf_nodes = bvh.get_intersecting_nodes(r, ray_t, temp_node_rec);
 
         // output # of nodes to check
         int total_size = 0;
         for (int i = 0; i < leaf_nodes.size(); i++) {
             total_size += leaf_nodes[i]->get_relevant_objects()->size();
+
+            // std::cout << "Node " << i << ": " << leaf_nodes[i]->bounding_box << std::endl;
         }
-        // std::cout << "# of nodes: " << leaf_nodes.size() << std::endl;
-        // std::cout << "# of objects: " << total_size << std::endl;
+        // std::cout << "# of nodes: " << leaf_nodes.size() << " | # of objects: " << total_size << std::endl;
 
         // iterate through all nodes and children in nodes
         shared_ptr<hittable> object;
         for(shared_ptr<bvh_node> node : leaf_nodes) {
 
             // iterate through all relevant objects in the node 
-            for(int obj_index : *(node->get_relevant_objects())){
-                object = objects->at(obj_index);
-                if (object -> hit(r, interval(ray_t.min, closest_so_far), temp_rec)) {
+            for(auto object : *(node->get_relevant_objects())){
+                if (object->hit(r, interval(ray_t.min, closest_so_far), temp_rec)) {
                     // update data for closest valid collision so far
                     hit_anything = true;
                     closest_so_far = temp_rec.t;

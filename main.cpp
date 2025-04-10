@@ -18,29 +18,30 @@ int main () {
     auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
     world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
 
-    for (int a = -11; a < 11; a++) {
-        for (int b = -11; b < 11; b++) {
+    for (int a = -10; a < 10; a++) {
+        for (int b = -10; b < 10; b++) {
             auto choose_mat = random_double();
-            point3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
+            double radius = random_double() * 0.4 + 0.1;
+            point3 center(a + 0.9*random_double(), radius, b + 0.9*random_double());
 
-            if ((center - point3(4, 0.2, 0)).length() > 0.9) {
+            if ((center - point3(4, radius, 0)).length() > 0.9) {
                 shared_ptr<material> sphere_material;
 
                 if (choose_mat < 0.8) {
                     // diffuse
                     auto albedo = color::random() * color::random();
                     sphere_material = make_shared<lambertian>(albedo);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
+                    world.add(make_shared<sphere>(center, radius, sphere_material));
                 } else if (choose_mat < 0.95) {
                     // metal
                     auto albedo = color::random(0.5, 1);
                     auto fuzz = random_double(0, 0.5);
                     sphere_material = make_shared<metal>(albedo, fuzz);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
+                    world.add(make_shared<sphere>(center, radius, sphere_material));
                 } else {
                     // glass
                     sphere_material = make_shared<dielectric>(1.5);
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));
+                    world.add(make_shared<sphere>(center, radius, sphere_material));
                 }
             }
         }
@@ -79,25 +80,25 @@ int main () {
     // cam.max_depth         = 50;
 
     // low res
-    // cam.aspect_ratio      = 16.0 / 9.0;
-    // cam.width       = 1000;
-    // cam.samples_per_pixel = 15;
-    // cam.max_depth         = 30;
-
     cam.aspect_ratio      = 16.0 / 9.0;
-    cam.width       = 300;
+    cam.width       = 700;
     cam.samples_per_pixel = 5;
     cam.max_depth         = 30;
 
+    // cam.aspect_ratio      = 16.0 / 9.0;
+    // cam.width       = 300;
+    // cam.samples_per_pixel = 5;
+    // cam.max_depth         = 30;
+
     cam.vfov     = 30;
-    cam.lookfrom = point3(15,2,3);
+    cam.lookfrom = point3(15,10,10);
     cam.lookat   = point3(0,0,0);
     cam.vup      = vec3(0,1,0);
 
     cam.defocus_angle = 0.8;
     cam.focus_dist    = 13.0;
 
-    int bvh_depth = 3;
+    int bvh_depth = 9;
     world.finalize(cam.get_center(), bvh_depth);
 
 

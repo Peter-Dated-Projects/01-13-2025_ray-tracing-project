@@ -85,7 +85,7 @@ class vec3 {
     }
 
     static double distance_to(const vec3& start, const vec3& end) {
-        return abs(vec3(end.x() - start.x(), end.y() - start.y(), end.z() - start.z()).length());
+        return vec3(end.x() - start.x(), end.y() - start.y(), end.z() - start.z()).length();
     }
 
 };

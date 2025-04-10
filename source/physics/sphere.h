@@ -14,7 +14,10 @@ private:
 
 public:
     sphere(const point3& center, double radius, shared_ptr<material> mat) : center(center), radius(std::fmax(0, radius)), mat(mat) {
-        calculate_bounding_box();
+        // initialize base objects
+        initialize_base_objects();
+
+        // std::cout << bounding_box << std::endl;
     }
 
     bool hit(const ray& r, interval ray_t, hit_record& rec) const override {

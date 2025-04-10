@@ -97,13 +97,13 @@ private:
         return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
     }
 
-    color ray_color(const ray& r, int depth, const hittable& world) const {
+    color ray_color(const ray& r, int depth, const hittable_list* world) const {
         if (depth <= 0) {
             return color(0, 0, 0);
         }
 
         hit_record rec;
-        if (world.hit(r, interval(0.001, infinity), rec)) {             // the 0.001 fixes shadow acne
+        if (world->hit(r, interval(0.001, infinity), rec)) {             // the 0.001 fixes shadow acne
             ray scattered;
             color attenuation;
 
@@ -136,7 +136,7 @@ public:
                                         // everything before plane == perfect focus
                                         // everything past plane   == defocused!!
 
-    void render(const hittable& world, int min_width, int max_width) {   
+    void render(const hittable_list& world, int min_width, int max_width) {   
         initialize();
 
         time_t start_time = time(NULL);
@@ -157,7 +157,7 @@ public:
                 // anti-aliasing
                 for (int sample = 0; sample < samples_per_pixel; sample++) {
                     ray r = get_ray(i, j);
-                    pixel_color += ray_color(r, max_depth, world);
+                    pixel_color += ray_color(r, max_depth, &world);
                 }
                 write_color(output, pixel_samples_scale * pixel_color);
             }
@@ -415,7 +415,7 @@ public:
 
     }
 
-    void render_portion(const hittable* world, area2d *portion, pipe_file_directory *pipefd, std::ofstream *file) {
+    void render_portion(const hittable_list* world, area2d *portion, pipe_file_directory *pipefd, std::ofstream *file) {
         // camera already initialized
         // header data already outputted
         
@@ -435,7 +435,7 @@ public:
                 // aa
                 for(int sample = 0; sample < samples_per_pixel; sample++) {
                     ray r = get_ray(x, y);
-                    pixel_color += ray_color(r, max_depth, *world);
+                    pixel_color += ray_color(r, max_depth, world);
                 }
 
                 // write to ostream file
