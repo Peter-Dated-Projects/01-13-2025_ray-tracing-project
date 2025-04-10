@@ -79,9 +79,14 @@ int main () {
     // cam.max_depth         = 50;
 
     // low res
+    // cam.aspect_ratio      = 16.0 / 9.0;
+    // cam.width       = 1000;
+    // cam.samples_per_pixel = 15;
+    // cam.max_depth         = 30;
+
     cam.aspect_ratio      = 16.0 / 9.0;
-    cam.width       = 1000;
-    cam.samples_per_pixel = 15;
+    cam.width       = 300;
+    cam.samples_per_pixel = 5;
     cam.max_depth         = 30;
 
     cam.vfov     = 30;
@@ -91,6 +96,9 @@ int main () {
 
     cam.defocus_angle = 0.8;
     cam.focus_dist    = 13.0;
+
+    int bvh_depth = 3;
+    world.finalize(cam.get_center(), bvh_depth);
 
 
     cam.multi_process_render(&world, 0, cam.width);

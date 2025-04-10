@@ -55,7 +55,15 @@
         "vector": "cpp",
         "algorithm": "cpp",
         "thread": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "deque": "cpp",
+        "execution": "cpp",
+        "memory": "cpp",
+        "forward_list": "cpp",
+        "iomanip": "cpp",
+        "print": "cpp",
+        "queue": "cpp",
+        "stack": "cpp"
     },
     "[cpp]": {
         "editor.defaultFormatter": "ms-vscode.cpptools"

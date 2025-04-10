@@ -14,7 +14,7 @@ private:
 
 public:
     sphere(const point3& center, double radius, shared_ptr<material> mat) : center(center), radius(std::fmax(0, radius)), mat(mat) {
-        // TODO : initialize the material pointer `mat`
+        calculate_bounding_box();
     }
 
     bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
@@ -31,7 +31,7 @@ public:
         if (disc < 0) return false;
 
         auto sqrtd = std::sqrt(disc);
-
+ 
         // find nearest root that lies in acceptable range
         auto root = (h - sqrtd) / a;
         if (!ray_t.surrounds(root)) {
@@ -51,6 +51,13 @@ public:
         return true;
     }
 
+    void calculate_bounding_box() override {
+        // TODO : implement this function
+        vec3 _min = center - vec3(radius, radius, radius);
+        vec3 _max = center + vec3(radius, radius, radius);
+
+        bounding_box = aabb(_min, _max);
+    }
 
 };
 

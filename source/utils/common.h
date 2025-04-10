@@ -45,6 +45,7 @@ inline double random_double(double min, double max) {
 #include "math/vec3.h"
 #include "math/interval.h"
 #include "math/area.h"
+#include "math/aabb.h"
 
 
 #endif

@@ -26,9 +26,15 @@ public:
 };
 
 class hittable {
+private:
+    // private members
+    // TODO : add private members if needed
 public:
+    aabb bounding_box;
+
     virtual ~hittable() = default;
     virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const = 0;
+    virtual void calculate_bounding_box() = 0;
 };
 
 

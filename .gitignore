@@ -2,3 +2,7 @@
 *.chk
 *.log
 result
+
+stash
+
+*.code

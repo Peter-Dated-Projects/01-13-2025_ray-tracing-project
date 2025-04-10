@@ -4,6 +4,7 @@
 #define camera_h
 
 #include "hittable.h"
+#include "hittable_list.h"
 #include "material.h"
 
 #include <atomic>
@@ -167,16 +168,21 @@ public:
         std::cout << "Time taken: " << (end_time - start_time) << " seconds" << std::endl;
     }
 
-    bool multi_process_render(const hittable* world, int min_width, int max_width) {
+    bool multi_process_render(const hittable_list* world, int min_width, int max_width) {
         initialize();
 
         std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
 
-        // Goal: create 4 processes -- 3 threads each
+        // Goal: max # of processes = (max # for computer)
         // Stage 1.1: groundwork
-        const int process_count = 7;
+        // int process_count = sysconf(_SC_NPROCESSORS_ONLN) - 1;
+        const int process_count = 7; 
+        if (process_count < 0) { // less than 1 core
+            std::cerr << "Error: invalid number of processes" << std::endl;
+            return false;
+        }
         int valid_threads = 0;
-
+        
         pipe_file_directory pipefd[process_count];
         pid_t children[process_count];
         std::ofstream files[process_count];
@@ -249,6 +255,8 @@ public:
                 exit(0);
 
             } else {                        // active parent script
+                // TODO _ potentially get the parent to all 
+                // perform calculations
                 children[i] = pid;
                 valid_threads ++;
 
@@ -304,7 +312,7 @@ public:
                             lines_rendered.fetch_add(1);
                             {
                                 std::lock_guard<std::mutex> lock(cout_mutex);
-                                std::clog << "\rScanlines remaining: " << (height*process_count - lines_rendered.load()) << " " << std::flush;
+                                std::clog << "\rScanlines remaining: " << (height * process_count - lines_rendered.load()) << " " << std::flush;
                             }
                         } else if(strncmp(buffer, "TIME", 4) == 0) {
                             std::lock_guard<std::mutex> lock(cout_mutex);
@@ -440,6 +448,8 @@ public:
 
     // getters + setters
     int get_height() { return height; }
+
+    point3 get_center() { return center; }
 
 };
 

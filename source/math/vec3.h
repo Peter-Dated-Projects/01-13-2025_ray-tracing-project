@@ -50,6 +50,24 @@ class vec3 {
         return (std::fabs(e[0]) < s) && (std::fabs(e[1]) < s) && (std::fabs(e[2]) < s);
     }
 
+    void set(double x, double y, double z) {
+        // set the vector to zero
+        e[0] = x;
+        e[1] = y;
+        e[2] = z;
+    }
+    
+    void set(const vec3& v) {
+        // set the vector to zero
+        e[0] = v.e[0];
+        e[1] = v.e[1];
+        e[2] = v.e[2];
+    }
+
+    // ----------------------------------------------------- //
+    // static functions
+    // ----------------------------------------------------- //
+
     static vec3 random() {
         return vec3(random_double(), random_double(), random_double());
     }
@@ -57,6 +75,19 @@ class vec3 {
     static vec3 random(double min, double max) {
         return vec3(random_double(min, max), random_double(min, max), random_double(min, max));
     }
+
+    static vec3 min(const vec3& u, const vec3& v) {
+        return vec3(std::fmin(u.e[0], v.e[0]), std::fmin(u.e[1], v.e[1]), std::fmin(u.e[2], v.e[2]));
+    }
+
+    static vec3 max(const vec3& u, const vec3& v) {
+        return vec3(std::fmax(u.e[0], v.e[0]), std::fmax(u.e[1], v.e[1]), std::fmax(u.e[2], v.e[2]));
+    }
+
+    static double distance_to(const vec3& start, const vec3& end) {
+        return abs(vec3(end.x() - start.x(), end.y() - start.y(), end.z() - start.z()).length());
+    }
+
 };
 
 // point3 is just an alias for vec3, but useful for geometric clarity in the code.
@@ -66,7 +97,7 @@ using point3 = vec3;
 // Vector Utility Functions
 
 inline std::ostream& operator<<(std::ostream& out, const vec3& v) {
-    return out << v.e[0] << ' ' << v.e[1] << ' ' << v.e[2];
+    return out << "(" << v.e[0] << ' ' << v.e[1] << ' ' << v.e[2] << ")";
 }
 
 inline vec3 operator+(const vec3& u, const vec3& v) {
