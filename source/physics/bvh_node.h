@@ -23,7 +23,6 @@ private:
 public: 
     double _distance_to_camera;
 
-    bvh_node(): is_leaf(false), _depth(0), _objects(nullptr), _distance_to_camera(0.0) {
     bvh_node(): is_leaf(false), _depth(0), _distance_to_camera(0.0) {
         calculate_bounding_box();
     }
